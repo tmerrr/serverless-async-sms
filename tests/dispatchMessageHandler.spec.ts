@@ -5,17 +5,26 @@ import { handler } from '../src/handlers/dispatchMessage';
 type MockApiGatewayEvent = Pick<APIGatewayEvent, 'body'>;
 type MockContext = Pick<Context, 'awsRequestId'>;
 
+const setupLoggerSpies = () => {
+  jest.spyOn(console, 'log').mockImplementation();
+  jest.spyOn(console, 'warn').mockImplementation();
+  jest.spyOn(console, 'error').mockImplementation();
+};
+
+const setupPublishToQueueSpy = (): jest.SpyInstance => jest
+  .spyOn(snsAdapter, 'publishToQueue')
+  .mockResolvedValueOnce();
+
 describe('Dispatch Message Handler', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
+    setupLoggerSpies();
   });
 
   describe('when a valid event body is received', () => {
     it('successfully publishes message to the queue and returns success response', async () => {
-      const publishToQueueSpy = jest
-        .spyOn(snsAdapter, 'publishToQueue')
-        .mockResolvedValue(undefined);
+      const publishToQueueSpy = setupPublishToQueueSpy();
 
       const messagePayload = {
         message: 'Hello world!',
@@ -46,9 +55,7 @@ describe('Dispatch Message Handler', () => {
 
   describe('when the event has no body', () => {
     it('returns a bad request response', async () => {
-      const publishToQueueSpy = jest
-        .spyOn(snsAdapter, 'publishToQueue')
-        .mockResolvedValue(undefined);
+      const publishToQueueSpy = setupPublishToQueueSpy();
 
       const event = {};
       const context: MockContext = { awsRequestId: 'uuid' };
@@ -69,9 +76,7 @@ describe('Dispatch Message Handler', () => {
 
   describe('when the event body is missing "phoneNumber"', () => {
     it('returns a bad request response', async () => {
-      const publishToQueueSpy = jest
-        .spyOn(snsAdapter, 'publishToQueue')
-        .mockResolvedValue(undefined);
+      const publishToQueueSpy = setupPublishToQueueSpy();
 
       const messagePayload = {
         message: 'Hello world!',
@@ -97,9 +102,7 @@ describe('Dispatch Message Handler', () => {
 
   describe('when the event body is missing "message"', () => {
     it('returns a bad request response', async () => {
-      const publishToQueueSpy = jest
-        .spyOn(snsAdapter, 'publishToQueue')
-        .mockResolvedValue(undefined);
+      const publishToQueueSpy = setupPublishToQueueSpy();
 
       const messagePayload = {
         phoneNumber: '+441234567890',
@@ -125,9 +128,7 @@ describe('Dispatch Message Handler', () => {
 
   describe('when the event body is invalid JSON', () => {
     it('returns a bad request response', async () => {
-      const publishToQueueSpy = jest
-        .spyOn(snsAdapter, 'publishToQueue')
-        .mockResolvedValue(undefined);
+      const publishToQueueSpy = setupPublishToQueueSpy();
 
       const event = {
         body: 'foo bar',

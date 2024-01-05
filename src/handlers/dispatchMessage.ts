@@ -43,10 +43,12 @@ export const handler: APIGatewayProxyHandler = async (event, context) => {
       console.warn('Event body is missing required fields', logContext);
       return invalidRequestResponse;
     }
+    console.log('Validated event body, publishing message to queue...', logContext);
     await publishToQueue({
       message,
       phoneNumber,
     }, correlationId);
+    console.log('Successfully published message to queue', logContext);
     return genResponse(202, 'Accepted');
   } catch (err: unknown) {
     console.error('An unexpected error occurred', err, logContext);
