@@ -8,6 +8,12 @@ type MockSQSEvent = {
   Records: MockSQSRecord[];
 };
 
+const runHandler = (event: MockSQSEvent) => handler(
+  event as SQSEvent,
+  {} as Context,
+  jest.fn(),
+);
+
 const setupLoggerSpies = () => {
   jest.spyOn(console, 'log').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation();
@@ -44,11 +50,7 @@ describe('Process Queue Handler', () => {
           genSqsRecord(),
         ],
       };
-      await handler(
-        event as SQSEvent,
-        {} as Context,
-        jest.fn(),
-      );
+      await runHandler(event);
 
       expect(dispatchSmsSpy).toHaveBeenCalledTimes(1)
     });
@@ -60,11 +62,6 @@ describe('Process Queue Handler', () => {
         .spyOn(snsAdapter, 'dispatchSms')
         .mockResolvedValue();
 
-      const messageBody: SqsMessageBody = {
-        message: 'Hello world!',
-        phoneNumber: '+441234567890',
-        correlationId: 'uuid',
-      };
       const event: MockSQSEvent = {
         Records: [
           genSqsRecord(),
@@ -72,11 +69,7 @@ describe('Process Queue Handler', () => {
           genSqsRecord(),
         ],
       };
-      await handler(
-        event as SQSEvent,
-        {} as Context,
-        jest.fn(),
-      );
+      await runHandler(event);
 
       expect(dispatchSmsSpy).toHaveBeenCalledTimes(3);
     });
@@ -89,11 +82,6 @@ describe('Process Queue Handler', () => {
         .mockRejectedValueOnce(new Error('Mocked Error'))
         .mockResolvedValue();
 
-      const messageBody: SqsMessageBody = {
-        message: 'Hello world!',
-        phoneNumber: '+441234567890',
-        correlationId: 'uuid',
-      };
       const event: MockSQSEvent = {
         Records: [
           genSqsRecord(),
@@ -101,11 +89,7 @@ describe('Process Queue Handler', () => {
           genSqsRecord(),
         ],
       };
-      await handler(
-        event as SQSEvent,
-        {} as Context,
-        jest.fn(),
-      );
+      await runHandler(event);
 
       expect(dispatchSmsSpy).toHaveBeenCalledTimes(3);
     });

@@ -3,7 +3,13 @@ import * as snsAdapter from '../src/adapters/snsAdapter';
 import { handler } from '../src/handlers/dispatchMessage';
 
 type MockApiGatewayEvent = Pick<APIGatewayEvent, 'body'>;
-type MockContext = Pick<Context, 'awsRequestId'>;
+
+const awsRequestId = 'uuid';
+const runHandler = (event: MockApiGatewayEvent) => handler(
+  event as APIGatewayEvent,
+  { awsRequestId } as Context,
+  jest.fn(),
+)
 
 const setupLoggerSpies = () => {
   jest.spyOn(console, 'log').mockImplementation();
@@ -33,14 +39,8 @@ describe('Dispatch Message Handler', () => {
       const event: MockApiGatewayEvent = {
         body: JSON.stringify(messagePayload),
       };
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
 
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event);
       expect(result).toEqual({
         statusCode: 202,
         body: JSON.stringify({ message: 'Accepted' }),
@@ -48,7 +48,7 @@ describe('Dispatch Message Handler', () => {
       expect(publishToQueueSpy).toHaveBeenCalledTimes(1);
       expect(publishToQueueSpy).toHaveBeenCalledWith(
         messagePayload,
-        context.awsRequestId,
+        awsRequestId,
       );
     });
   });
@@ -56,16 +56,8 @@ describe('Dispatch Message Handler', () => {
   describe('when the event has no body', () => {
     it('returns a bad request response', async () => {
       const publishToQueueSpy = setupPublishToQueueSpy();
-
       const event = {};
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
-
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event as MockApiGatewayEvent);
       expect(result).toEqual({
         statusCode: 400,
         body: JSON.stringify({ message: '"message" and "phoneNumber" are both required properties' }),
@@ -84,14 +76,8 @@ describe('Dispatch Message Handler', () => {
       const event = {
         body: JSON.stringify(messagePayload),
       };
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
 
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event);
       expect(result).toEqual({
         statusCode: 400,
         body: JSON.stringify({ message: '"message" and "phoneNumber" are both required properties' }),
@@ -110,14 +96,7 @@ describe('Dispatch Message Handler', () => {
       const event = {
         body: JSON.stringify(messagePayload),
       };
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
-
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event);
       expect(result).toEqual({
         statusCode: 400,
         body: JSON.stringify({ message: '"message" and "phoneNumber" are both required properties' }),
@@ -133,14 +112,8 @@ describe('Dispatch Message Handler', () => {
       const event = {
         body: 'foo bar',
       };
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
 
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event);
       expect(result).toEqual({
         statusCode: 400,
         body: JSON.stringify({ message: '"message" and "phoneNumber" are both required properties' }),
@@ -162,14 +135,8 @@ describe('Dispatch Message Handler', () => {
       const event = {
         body: JSON.stringify(messagePayload),
       };
-      const context: MockContext = { awsRequestId: 'uuid' };
-      const mockCallback = jest.fn();
 
-      const result = await handler(
-        event as APIGatewayEvent,
-        context as Context,
-        mockCallback,
-      );
+      const result = await runHandler(event);
       expect(result).toEqual({
         statusCode: 500,
         body: JSON.stringify({ message: 'Internal Server Error' }),
