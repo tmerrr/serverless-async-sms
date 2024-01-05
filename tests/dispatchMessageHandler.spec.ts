@@ -43,4 +43,31 @@ describe('Dispatch Message Handler', () => {
       );
     });
   });
+
+  describe('when a invalid event body is received with no body', () => {
+    it('successfully publishes message to SNS ', async () => {
+      const publishToQueueSpy = jest
+        .spyOn(snsAdapter, 'publishToQueue')
+        .mockResolvedValue(undefined);
+
+      const messagePayload = {
+        message: 'Hello world!',
+        phoneNumber: '+441234567890',
+      };
+      const event = {};
+      const context: MockContext = { awsRequestId: 'uuid' };
+      const mockCallback = jest.fn();
+
+      const result = await handler(
+        event as APIGatewayEvent,
+        context as Context,
+        mockCallback,
+      );
+      expect(result).toEqual({
+        statusCode: 400,
+        body: JSON.stringify({ message: '"message" and "phoneNumber" are both required properties' }),
+      });
+      expect(publishToQueueSpy).not.toHaveBeenCalled();
+    });
+  });
 });
