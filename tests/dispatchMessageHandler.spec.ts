@@ -25,8 +25,13 @@ describe('Dispatch Message Handler', () => {
         body: JSON.stringify(messagePayload),
       };
       const context: MockContext = { awsRequestId: 'uuid' };
+      const mockCallback = jest.fn();
 
-      const result = await handler(event, context);
+      const result = await handler(
+        event as APIGatewayEvent,
+        context as Context,
+        mockCallback,
+      );
       expect(result).toEqual({
         statusCode: 202,
         body: JSON.stringify({ message: 'Accepted' }),
