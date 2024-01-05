@@ -9,6 +9,9 @@ import { DispatchMessageBody, LogContext } from '../types';
 export const handler: APIGatewayProxyHandler = async (event, context) => {
   const logContext: LogContext = {};
   try {
+    // correlationId is used for tracing in logs
+    // is also published to the queue so the queue processor can use the same correlation Id
+    // this way logs could be filtered on correlation Id to view the entire cycle of a request
     const { awsRequestId: correlationId } = context;
     logContext.correlationId = correlationId;
     const eventBody = parseEventBody(event.body);
