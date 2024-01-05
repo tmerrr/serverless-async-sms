@@ -4,43 +4,52 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 import { publishToQueue } from '../adapters/snsAdapter';
-import { DispatchMessageBody } from '../types';
+import { DispatchMessageBody, LogContext } from '../types';
 
-// const validateEventBody = (eventBody: APIGatewayProxyEvent['body']): DispatchMessageBody => {
-//   try {
-//     if (!eventBody) {
+const genResponse = (statusCode: number, message: string): APIGatewayProxyResult => ({
+  statusCode,
+  body: JSON.stringify({ message }),
+});
 
-//     }
-//   } catch (err: unknown) {
-    
-//   }
-// };
+const invalidRequestResponse: APIGatewayProxyResult = genResponse(
+  400,
+  '"message" and "phoneNumber" are both required properties',
+);
+
+const parseEventBody = (eventBody: APIGatewayProxyEvent['body']): DispatchMessageBody | null => {
+  if (!eventBody) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(eventBody);
+  } catch (err: unknown) {
+    return null;
+  }
+}
 
 export const handler: APIGatewayProxyHandler = async (event, context) => {
-  const invalidRequestResponse: APIGatewayProxyResult = {
-    statusCode: 400,
-    body: JSON.stringify({
-      message: '"message" and "phoneNumber" are both required properties',
-    }),
-  };
-  const { awsRequestId: correlationId } = context;
-  const logContext = { correlationId };
-  if (!event.body) {
-    console.log('No event body present in event', logContext);
-    return invalidRequestResponse;
+  const logContext: LogContext = {};
+  try {
+    const { awsRequestId: correlationId } = context;
+    logContext.correlationId = correlationId;
+    const eventBody = parseEventBody(event.body);
+    if (!eventBody) {
+      console.warn('Invalid body provided in event', logContext);
+      return invalidRequestResponse;
+    }
+    const { message, phoneNumber } = eventBody;
+    if (!message || !phoneNumber) {
+      console.warn('Event body is missing required fields', logContext);
+      return invalidRequestResponse;
+    }
+    await publishToQueue({
+      message,
+      phoneNumber,
+    }, correlationId);
+    return genResponse(202, 'Accepted');
+  } catch (err: unknown) {
+    console.error('An unexpected error occurred', err, logContext);
+    return genResponse(500, 'Internal Server Error');
   }
-  const { message, phoneNumber } = JSON.parse(event.body);
-  if (!message || !phoneNumber) {
-    console.log('Event body is missing required fields', logContext);
-    return invalidRequestResponse;
-  }
-  // const { awsRequestId } = context;
-  await publishToQueue({
-    message,
-    phoneNumber,
-  }, correlationId);
-  return {
-    statusCode: 202,
-    body: JSON.stringify({ message: 'Accepted' }),
-  };
 };
