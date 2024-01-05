@@ -2,6 +2,9 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { awsConfig } from '../config';
 import { DispatchMessageBody } from '../types';
 
+// basic adapter functions to abstract away the SNSClient and aws config
+// also handles renaming to AWS attributes, such as "message" to "Message"
+
 const client = new SNSClient();
 
 export const publishToQueue = async (

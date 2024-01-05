@@ -1,0 +1,80 @@
+service: serverless-sms-service
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-2
+  profile: serverless # using specific creds to deploy
+  environment:
+    SNS_TOPIC_ARN:
+      Fn::Sub: arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SmsDispatchTopic
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          # using wildcard is not ideal and wouldn't use this in production
+          # preference would be to have two separate iam role policies for each lamba
+          # one allowed to publish only to topic (like comment below)
+          # - Fn::Sub: arn:aws:sns:${AWS::Region}:${AWS::AccountId}:SmsDispatchTopic
+          # and a second to allow only publishing to SMS
+          Resource: "*"
+
+functions:
+  dispatchMessage:
+    handler: src/handlers/dispatchMessage.handler
+    events:
+      - http:
+          path: message/send
+          method: post
+          cors: true
+
+  processQueue:
+    handler: src/handlers/processQueue.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [SnsQueue, Arn]
+
+resources:
+  Resources:
+    SnsQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "SmsDispatchQueue"
+
+    SnsTopic:
+      Type: "AWS::SNS::Topic"
+      Properties:
+        TopicName: "SmsDispatchTopic"
+
+    SNSSubscription:
+      Type: "AWS::SNS::Subscription"
+      Properties:
+        TopicArn:
+          Ref: SnsTopic
+        Protocol: sqs
+        Endpoint:
+          Fn::GetAtt: [SnsQueue, Arn]
+
+    QueuePolicy:
+      Type: "AWS::SQS::QueuePolicy"
+      Properties:
+        Queues:
+          - Ref: SnsQueue
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "sqs:SendMessage"
+              Resource:
+                Fn::GetAtt: [SnsQueue, Arn]
+              Condition:
+                ArnEquals:
+                  "aws:SourceArn":
+                    Ref: SnsTopic
+
+plugins:
+  - serverless-plugin-typescript
